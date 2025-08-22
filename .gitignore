@@ -2,4 +2,5 @@ venv/
 *.csv
 *.txt
 *.json
+*.iob
 !sample_urls.csv
