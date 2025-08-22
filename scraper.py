@@ -74,9 +74,27 @@ def read_urls_from_csv(filename, limit=30):
         print(f"Ошибка при чтении CSV: {e}")
         return []
 
+def clean_text_for_csv(text):
+    """
+    Очищает текст от символов, которые могут вызвать проблемы при сохранении в CSV
+    """
+    if not text:
+        return ""
+    
+    # Удаляем управляющие символы
+    text = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', text)
+    
+    # Заменяем проблемные для CSV символы
+    text = text.replace('"', "'")
+    text = text.replace('\r', ' ').replace('\n', ' ')
+    
+    # Убеждаемся, что текст в UTF-8
+    text = text.encode('utf-8', 'ignore').decode('utf-8')
+    
+    return text
 def main():
     # Читаем URL из CSV-файла (первые 30)
-    urls = read_urls_from_csv('URL_list.csv', limit=30)
+    urls = read_urls_from_csv('URL_list.csv', limit=60)
     
     if not urls:
         print("Не удалось прочитать URL из файла")
@@ -86,29 +104,67 @@ def main():
     
     # Собираем текст с каждой страницы
     all_texts = []
-    
     for i, url in enumerate(urls, 1):
         print(f"Обрабатывается URL {i}/{len(urls)}: {url}")
         
-        html = get_page_html(url)
-        if not html:
-            continue
+        try:
+            html = get_page_html(url)
+            if not html:
+                continue
+                
+            text = extract_clean_text(html)
+            clean_text = clean_text_for_csv(text)  # <- Новая функция очистки
             
-        text = extract_clean_text(html)
-        all_texts.append({
-            'url': url,
-            'text': text
-        })
+            all_texts.append({
+                'url': url,
+                'text': clean_text  # <- Сохраняем очищенный текст
+            })
+            
+            # Периодически сохраняем промежуточные результаты
+            if i % 10 == 0:  # Сохраняем каждые 10 URL
+                df = pd.DataFrame(all_texts)
+                df.to_csv('collected_texts_partial.csv', index=False, encoding='utf-8')
+                print(f"Промежуточное сохранение после {i} URL")
+                
+        except Exception as e:
+            print(f"Ошибка при обработке URL {url}: {e}")
+            # Продолжаем обработку следующих URL
+            continue
         
         # Пауза между запросами
         time.sleep(2)
     
-    # Сохраняем результаты
+       # Сохраняем результаты с обработкой ошибок кодировки
     output_file = 'collected_texts.csv'
-    df = pd.DataFrame(all_texts)
-    df.to_csv(output_file, index=False, encoding='utf-8')
     
-    print(f"Готово! Результаты сохранены в {output_file}")
+    try:
+        df = pd.DataFrame(all_texts)
+        
+        # Очищаем текст от проблемных символов перед сохранением
+        for index, row in df.iterrows():
+            if pd.notna(row['text']):
+                # Удаляем управляющие символы и не-UTF8 символы
+                clean_text = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', row['text'])
+                clean_text = clean_text.encode('utf-8', 'ignore').decode('utf-8')
+                df.at[index, 'text'] = clean_text
+        
+        # Сохраняем с обработкой ошибок
+        df.to_csv(output_file, index=False, encoding='utf-8')
+        print(f"Готово! Результаты сохранены в {output_file}")
+        
+    except Exception as e:
+        print(f"Ошибка при сохранении CSV: {e}")
+        # Альтернативный способ сохранения данных
+        try:
+            with open('collected_texts_backup.txt', 'w', encoding='utf-8') as f:
+                for item in all_texts:
+                    # Очищаем текст перед записью
+                    clean_text = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', item['text'])
+                    clean_text = clean_text.encode('utf-8', 'ignore').decode('utf-8')
+                    f.write(f"URL: {item['url']}\nTEXT: {clean_text}\n\n")
+            print("Данные сохранены в текстовом формате в collected_texts_backup.txt")
+        except Exception as backup_error:
+            print(f"Не удалось сохранить даже в текстовом формате: {backup_error}")
     
     # Статистика
     total_text_length = sum(len(item['text']) for item in all_texts)
