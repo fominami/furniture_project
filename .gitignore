@@ -1,4 +1,5 @@
 venv/
 *.csv
 *.txt
+*.json
 !sample_urls.csv
