@@ -5,6 +5,7 @@ venv/
 *.txt
 *.json
 *.iob
+!requirements.txt
 !sample_urls.csv
 #Model
 /ner_model_small
