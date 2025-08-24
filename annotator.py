@@ -1,4 +1,3 @@
-# Файл: quick_annotator.py
 import re
 
 def quick_annotate(text):
@@ -22,21 +21,21 @@ def quick_annotate(text):
 
 # Обработка файла
 def fast_annotation():
-    with open('for_annotation_quick.txt', 'r', encoding='utf-8') as f:
+    with open('for_annotation.txt', 'r', encoding='utf-8') as f:
         content = f.read()
     
     texts = content.split('=' * 80)
     results = []
     
     for i, text_block in enumerate(texts):
-        if not text_block.strip() or i >= 7:  # только первые 7
+        if not text_block.strip() or i >= 22:  # только первые 7
             continue
             
         url_match = re.search(r'URL: (.*?)\n', text_block)
         text_match = re.search(r'TEXT \d+:\n(.*?)$', text_block, re.DOTALL)
         
         if url_match and text_match:
-            print(f"\n📝 РАЗМЕТКА {i+1}/7")
+            print(f"\n📝 РАЗМЕТКА {i+1}/22")
             products = quick_annotate(text_match.group(1).strip())
             
             if products:
@@ -54,4 +53,3 @@ def fast_annotation():
 
 if __name__ == "__main__":
     fast_annotation()
-    

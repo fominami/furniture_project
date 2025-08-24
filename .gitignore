@@ -1,6 +1,14 @@
+#venv
 venv/
+#files
 *.csv
 *.txt
 *.json
 *.iob
 !sample_urls.csv
+#Model
+/ner_model_small
+
+__pycache__/
+*.pyc
+*.pyo

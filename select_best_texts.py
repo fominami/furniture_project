@@ -1,4 +1,4 @@
-# Файл: select_best_texts.py
+
 import pandas as pd
 
 # Читаем собранные данные

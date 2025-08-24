@@ -1,0 +1,175 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Извлечение товаров из веб-страниц</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .form-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        input[type="url"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .results {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .product-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .product-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .product-item:last-child {
+            border-bottom: none;
+        }
+        .stats {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .error {
+            color: #d9534f;
+            padding: 10px;
+            background-color: #f8d7da;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Извлечение товаров из веб-страниц</h1>
+    
+    <div class="form-container">
+        <form id="urlForm">
+            <input type="url" name="url" placeholder="Введите URL страницы с товарами" required>
+            <button type="submit">Извлечь товары</button>
+        </form>
+    </div>
+    
+    <div id="loading" class="loading" style="display: none;">
+        <p>Обработка страницы...</p>
+    </div>
+    
+    <div id="resultsContainer" class="results" style="display: none;">
+        <h2>Результаты</h2>
+        <div id="stats" class="stats"></div>
+        <ul id="productList" class="product-list"></ul>
+    </div>
+    
+    <div id="errorContainer" class="error" style="display: none;"></div>
+
+    <script>
+        document.getElementById('urlForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const url = document.querySelector('input[name="url"]').value;
+            const resultsContainer = document.getElementById('resultsContainer');
+            const errorContainer = document.getElementById('errorContainer');
+            const loading = document.getElementById('loading');
+            const productList = document.getElementById('productList');
+            const stats = document.getElementById('stats');
+            
+            // Скрываем предыдущие результаты и ошибки
+            resultsContainer.style.display = 'none';
+            errorContainer.style.display = 'none';
+            loading.style.display = 'block';
+            
+            try {
+                const formData = new FormData();
+                formData.append('url', url);
+                
+                const response = await fetch('/extract', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Отображаем статистику
+                    stats.innerHTML = `
+                        <strong>Статистика обработки:</strong><br>
+                        Загрузка страницы: ${data.stats.download_time} сек.<br>
+                        Очистка текста: ${data.stats.cleaning_time} сек.<br>
+                        Обработка моделью: ${data.stats.processing_time} сек.<br>
+                        Общее время: ${data.stats.total_time} сек.<br>
+                        Найдено товаров: ${data.stats.products_count}
+                    `;
+                    
+                    // Отображаем товары
+                    productList.innerHTML = '';
+                    if (data.products && data.products.length > 0) {
+                        data.products.forEach(product => {
+                            const li = document.createElement('li');
+                            li.className = 'product-item';
+                            li.textContent = product;
+                            productList.appendChild(li);
+                        });
+                    } else {
+                        productList.innerHTML = '<li class="product-item">Товары не найдены</li>';
+                    }
+                    
+                    resultsContainer.style.display = 'block';
+                } else {
+                    errorContainer.textContent = data.error || 'Произошла ошибка';
+                    errorContainer.style.display = 'block';
+                }
+            } catch (error) {
+                errorContainer.textContent = 'Произошла ошибка при отправке запроса';
+                errorContainer.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
